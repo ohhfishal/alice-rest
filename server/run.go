@@ -54,8 +54,5 @@ func Run(
 		}
 	}()
 	wg.Wait()
-
-	slog.Info("DONE")
-
 	return nil
 }

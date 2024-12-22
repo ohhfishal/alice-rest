@@ -49,11 +49,11 @@ func (h Handler) Log(next http.Handler) http.Handler {
 		case status < 300:
 			fallthrough
 		case status < 400:
+			fallthrough
+		case status < 500:
 			h.Logger.Debug(fmt.Sprintf("%s %s", r.Method, r.URL),
 				"status", rw.status,
 				"duration", time.Since(start))
-		case status < 500:
-			fallthrough
 		default:
 			h.Logger.Warn(fmt.Sprintf("%s %s", r.Method, r.URL),
 				"status", rw.status,
