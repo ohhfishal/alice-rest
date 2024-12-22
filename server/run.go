@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ohhfishal/alice-rest/config"
+	"github.com/ohhfishal/alice-rest/event"
 	"github.com/ohhfishal/alice-rest/handler"
 )
 
@@ -25,8 +26,9 @@ func Run(
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	h := handler.Handler{
-		Logger: logger,
-		Config: cfg,
+		Logger:       logger,
+		Config:       cfg,
+		EventManager: event.New(),
 	}
 	server := NewServer(&h)
 	httpServer := &http.Server{

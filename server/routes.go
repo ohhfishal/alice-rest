@@ -7,7 +7,7 @@ import (
 
 func addRoutes(mux *http.ServeMux, h *handler.Handler) http.Handler {
 
-	mux.Handle("GET /api/v1/event", h.GetEvents())
+	mux.Handle("GET /api/v1/event/{user}", h.GetEvents())
 	mux.Handle("POST /api/v1/event/{user}", h.PostEvent())
 	mux.Handle("GET /api/v1/event/{user}/{id}", h.GetEvent())
 	mux.Handle("PATCH /api/v1/event/{user}/{id}", h.PatchEvent())
