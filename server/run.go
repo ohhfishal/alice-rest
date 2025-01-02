@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/ohhfishal/alice-rest/config"
-	"github.com/ohhfishal/alice-rest/event"
 	"github.com/ohhfishal/alice-rest/handler"
+	"github.com/ohhfishal/alice-rest/lib/alice"
 )
 
 func Run(
@@ -25,10 +25,15 @@ func Run(
 	cfg := config.NewConfig(args, getenv)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	a, err := alice.New()
+	if err != nil {
+		return fmt.Errorf("Failed to create database: %w", err)
+	}
+
 	h := handler.Handler{
-		Logger:       logger,
-		Config:       cfg,
-		EventManager: event.New(),
+		Logger: logger,
+		Config: cfg,
+		Alice:  a,
 	}
 	server := NewServer(&h)
 	httpServer := &http.Server{
@@ -39,7 +44,7 @@ func Run(
 	go func() {
 		logger.Info(fmt.Sprintf("listening on %s", httpServer.Addr))
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("listening and serving: %s", err)
+			slog.Error(fmt.Errorf("listening and serving: %w", err).Error())
 		}
 	}()
 
@@ -52,7 +57,7 @@ func Run(
 		shutdownCtx, cancel := context.WithTimeout(shutdownCtx, 10*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			logger.Error("shutting down: %w", err)
+			logger.Error(fmt.Errorf("shutting down: %w", err).Error())
 		}
 	}()
 	wg.Wait()

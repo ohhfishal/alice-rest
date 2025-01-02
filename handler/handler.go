@@ -5,16 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ohhfishal/alice-rest/config"
-	"github.com/ohhfishal/alice-rest/event"
+	"github.com/ohhfishal/alice-rest/lib/alice"
 	"io"
 	"log/slog"
 	"net/http"
 )
 
 type Handler struct {
-	Logger       *slog.Logger
-	Config       *config.Config
-	EventManager event.EventManager
+	Logger *slog.Logger
+	Config *config.Config
+	Alice  alice.Alice
 }
 
 type CustomHandler func(http.ResponseWriter, *http.Request) http.Handler

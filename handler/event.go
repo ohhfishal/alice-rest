@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	alice "github.com/ohhfishal/alice/event"
+	alice "github.com/ohhfishal/alice-rest/lib/event"
 )
 
 func (h *Handler) GetEvent() http.Handler {
@@ -20,7 +20,7 @@ func (h *Handler) GetEvent() http.Handler {
 			return Error(400, errors.New("id"))
 		}
 
-		event, err := h.EventManager.Get(user, id)
+		event, err := h.Alice.Get(user, id)
 		if err != nil {
 			return Error(500, fmt.Errorf("getting event: %w", err))
 		}
@@ -29,7 +29,7 @@ func (h *Handler) GetEvent() http.Handler {
 }
 
 func (h *Handler) GetEvents() http.Handler {
-	return CustomHandler(func(http.ResponseWriter, *http.Request) http.Handler {
+	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
 		return Error(501, ErrNotImplemented)
 	})
 }
@@ -46,7 +46,7 @@ func (h *Handler) PostEvent() http.Handler {
 			return Error(400, err)
 		}
 
-		_, err = h.EventManager.Create(user, newEvent)
+		_, err = h.Alice.Create(user, newEvent)
 		if err != nil {
 			return Error(500, fmt.Errorf("failed to create event: %w", err))
 		}
@@ -55,13 +55,13 @@ func (h *Handler) PostEvent() http.Handler {
 }
 
 func (h *Handler) PatchEvent() http.Handler {
-	return CustomHandler(func(http.ResponseWriter, *http.Request) http.Handler {
+	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
 		return Error(501, ErrNotImplemented)
 	})
 }
 
 func (h *Handler) DeleteEvent() http.Handler {
-	return CustomHandler(func(http.ResponseWriter, *http.Request) http.Handler {
+	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
 		user := r.PathValue("user")
 		if user == "" {
 			return Error(400, errors.New("missing user"))
@@ -72,10 +72,10 @@ func (h *Handler) DeleteEvent() http.Handler {
 			return Error(400, errors.New("id"))
 		}
 
-		event, err := h.EventManager.Delete(user, id)
+		err := h.Alice.Delete(user, id)
 		if err != nil {
 			return Error(500, fmt.Errorf("deleting event: %w", err))
 		}
-		return JSON(200, event)
+		return Text(200, "Deleted\n")
 	})
 }
