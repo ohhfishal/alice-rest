@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/ohhfishal/alice-rest/handler"
+	"github.com/ohhfishal/alice-rest/server/handler"
 	"log/slog"
 	"net/http"
 )

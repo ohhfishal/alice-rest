@@ -1,10 +1,16 @@
-package config
+package server
 
 import (
 	"log/slog"
 )
 
 type LogLevel string
+
+type Config struct {
+	Host     string
+	Port     string
+	LogLevel slog.Level
+}
 
 func (logLevel LogLevel) Level() slog.Level {
 	switch logLevel {
@@ -20,12 +26,6 @@ func (logLevel LogLevel) Level() slog.Level {
 		return slog.LevelInfo
 	}
 
-}
-
-type Config struct {
-	Host     string
-	Port     string
-	LogLevel slog.Level
 }
 
 func NewConfig(_ []string, getenv func(string) string) *Config {

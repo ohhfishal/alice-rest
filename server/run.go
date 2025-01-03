@@ -12,9 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ohhfishal/alice-rest/config"
-	"github.com/ohhfishal/alice-rest/handler"
 	"github.com/ohhfishal/alice-rest/lib/alice"
+	"github.com/ohhfishal/alice-rest/server/handler"
 )
 
 func Run(
@@ -22,7 +21,7 @@ func Run(
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
-	cfg := config.NewConfig(args, getenv)
+	cfg := NewConfig(args, getenv)
 	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{
 		Level: cfg.LogLevel,
 	}))
@@ -34,7 +33,6 @@ func Run(
 
 	h := handler.Handler{
 		Logger: logger,
-		Config: cfg,
 		Alice:  a,
 	}
 

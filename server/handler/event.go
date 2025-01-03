@@ -14,11 +14,7 @@ func (h *Handler) GetEvent() http.Handler {
 		if user == "" {
 			return Error(400, errors.New("missing user"))
 		}
-
 		id := r.PathValue("id")
-		if user == "" {
-			return Error(400, errors.New("id"))
-		}
 
 		event, err := h.Alice.Get(user, id)
 		if err != nil {

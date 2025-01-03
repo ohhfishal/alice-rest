@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ohhfishal/alice-rest/config"
 	"github.com/ohhfishal/alice-rest/lib/alice"
 	"io"
 	"log/slog"
@@ -13,7 +12,6 @@ import (
 
 type Handler struct {
 	Logger *slog.Logger
-	Config *config.Config
 	Alice  alice.Alice
 }
 
