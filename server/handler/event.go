@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -11,9 +10,6 @@ import (
 func (h *Handler) GetEvent() http.Handler {
 	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
 		user := r.PathValue("user")
-		if user == "" {
-			return Error(400, errors.New("missing user"))
-		}
 		id := r.PathValue("id")
 
 		event, err := h.Alice.Get(user, id)
@@ -33,9 +29,6 @@ func (h *Handler) GetEvents() http.Handler {
 func (h *Handler) PostEvent() http.Handler {
 	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
 		user := r.PathValue("user")
-		if user == "" {
-			return Error(400, errors.New("missing user"))
-		}
 
 		newEvent, err := decode[alice.Event](r)
 		if err != nil {
@@ -59,14 +52,7 @@ func (h *Handler) PatchEvent() http.Handler {
 func (h *Handler) DeleteEvent() http.Handler {
 	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
 		user := r.PathValue("user")
-		if user == "" {
-			return Error(400, errors.New("missing user"))
-		}
-
 		id := r.PathValue("id")
-		if user == "" {
-			return Error(400, errors.New("id"))
-		}
 
 		err := h.Alice.Delete(user, id)
 		if err != nil {
