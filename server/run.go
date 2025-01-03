@@ -23,11 +23,13 @@ func Run(
 	defer cancel()
 
 	cfg := config.NewConfig(args, getenv)
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{
+		Level: cfg.LogLevel,
+	}))
 
 	a, err := alice.New()
 	if err != nil {
-		return fmt.Errorf("Failed to create database: %w", err)
+		return fmt.Errorf("failed to create database: %w", err)
 	}
 
 	h := handler.Handler{
@@ -35,10 +37,13 @@ func Run(
 		Config: cfg,
 		Alice:  a,
 	}
+
 	server := NewServer(&h)
 	httpServer := &http.Server{
-		Addr:    net.JoinHostPort(cfg.Host, cfg.Port),
-		Handler: server,
+		Addr:         net.JoinHostPort(cfg.Host, cfg.Port),
+		Handler:      server,
+		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 2 * time.Second,
 	}
 
 	go func() {
@@ -53,6 +58,7 @@ func Run(
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
+		logger.Info("shutting down")
 		shutdownCtx := context.Background()
 		shutdownCtx, cancel := context.WithTimeout(shutdownCtx, 10*time.Second)
 		defer cancel()

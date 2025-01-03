@@ -13,6 +13,8 @@ func addRoutes(mux *http.ServeMux, h *handler.Handler) http.Handler {
 	mux.Handle("PATCH /api/v1/event/{user}/{id}", h.PatchEvent())
 	mux.Handle("DELETE /api/v1/event/{user}/{id}", h.DeleteEvent())
 
+	mux.Handle("GET /readyz", h.Readyz())
+
 	mux.HandleFunc("/", http.NotFound)
 
 	return h.Log(mux)

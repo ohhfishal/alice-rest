@@ -2,7 +2,7 @@ package database
 
 import (
 	"io"
-	"testing"
+	// "testing"
 )
 
 func CreateTo(writer io.WriteCloser) Option {
@@ -30,7 +30,4 @@ func WriteTo(reader io.WriteCloser) Option {
 		}
 		return nil
 	}
-}
-
-func TestDatabase(t *testing.T) {
 }
