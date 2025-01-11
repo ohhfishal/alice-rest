@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 )
 
 func (h Handler) UserAuth(next http.Handler) http.Handler {
+	// TODO: Implement
 	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
 		user := r.PathValue("user")
 		if user == "" || user == "test" {
@@ -18,27 +20,35 @@ func (h Handler) UserAuth(next http.Handler) http.Handler {
 	})
 }
 
+func (h Handler) SetupContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ctx := context.WithValue(r.Context(), "start", start)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func (h Handler) Log(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rw := responseWriter{ResponseWriter: w}
-		start := time.Now()
 		next.ServeHTTP(&rw, r)
-		status := rw.status
+
+		status := rw.Status()
+
+		ctx := context.WithValue(r.Context(), "status", status)
+		ctxErr := ctx.Err()
+
 		switch {
+		case ctxErr != nil:
+			h.Logger.ErrorContext(ctx, ctxErr.Error())
 		case status < 300:
 			fallthrough
 		case status < 400:
 			fallthrough
 		case status < 500:
-			h.Logger.Debug(fmt.Sprintf("%s %s", r.Method, r.URL),
-				"status", rw.status,
-				"duration", time.Since(start))
+			h.Logger.DebugContext(ctx, fmt.Sprintf("%s %s", r.Method, r.URL))
 		default:
-			h.Logger.Warn(fmt.Sprintf("%s %s", r.Method, r.URL),
-				"status", rw.status,
-				"body", rw.writer.String(),
-				"duration", time.Since(start))
-
+			h.Logger.WarnContext(ctx, fmt.Sprintf("%s %s", r.Method, r.URL), "body", rw.writer.String())
 		}
 	})
 }

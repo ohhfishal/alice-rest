@@ -22,9 +22,8 @@ func Run(
 	defer cancel()
 
 	cfg := NewConfig(args, getenv)
-	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{
-		Level: cfg.LogLevel,
-	}))
+
+	logger := NewLogger(stdout, cfg.LogLevel)
 
 	a, err := alice.New()
 	if err != nil {
@@ -32,16 +31,18 @@ func Run(
 	}
 
 	h := handler.Handler{
-		Logger: logger,
-		Alice:  a,
+		Logger:          logger,
+		Alice:           a,
+		ResponseTimeout: cfg.ResponseTimeout,
 	}
 
-	server := NewServer(&h)
+	mux := http.NewServeMux()
+	server := addRoutes(mux, h)
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort(cfg.Host, cfg.Port),
 		Handler:      server,
 		ReadTimeout:  1 * time.Second,
-		WriteTimeout: 2 * time.Second,
+		WriteTimeout: cfg.ResponseTimeout + time.Second,
 	}
 
 	go func() {

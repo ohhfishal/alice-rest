@@ -2,14 +2,16 @@ package server
 
 import (
 	"log/slog"
+	"time"
 )
 
 type LogLevel string
 
 type Config struct {
-	Host     string
-	Port     string
-	LogLevel slog.Level
+	Host            string
+	Port            string
+	LogLevel        slog.Level
+	ResponseTimeout time.Duration
 }
 
 func (logLevel LogLevel) Level() slog.Level {
@@ -40,6 +42,10 @@ func NewConfig(_ []string, getenv func(string) string) *Config {
 }
 
 func (c *Config) UseDefaults() {
+	if c.ResponseTimeout == 0 {
+		c.ResponseTimeout = time.Second * 5
+
+	}
 	if c.Host == "" {
 		c.Host = ""
 	}

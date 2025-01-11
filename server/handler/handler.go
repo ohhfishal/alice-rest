@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ohhfishal/alice-rest/lib/alice"
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
+
+	"github.com/ohhfishal/alice-rest/lib/alice"
 )
 
 type Handler struct {
-	Logger *slog.Logger
-	Alice  alice.Alice
+	Logger          *slog.Logger
+	Alice           alice.Alice
+	ResponseTimeout time.Duration
 }
 
 type CustomHandler func(http.ResponseWriter, *http.Request) http.Handler
@@ -26,10 +29,6 @@ func (handler CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 var ErrNotImplemented = errors.New("not implemented")
-
-func status(err error) int {
-	return 500
-}
 
 func JSON(status int, v any) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

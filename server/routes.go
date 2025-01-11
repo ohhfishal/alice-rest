@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func addRoutes(mux *http.ServeMux, h *handler.Handler) http.Handler {
+func addRoutes(mux *http.ServeMux, h handler.Handler) http.Handler {
 
 	mux.Handle("GET /api/v1/event/{user}", h.UserAuth(h.GetEvents()))
 	mux.Handle("POST /api/v1/event/{user}", h.UserAuth(h.PostEvent()))
@@ -17,5 +17,8 @@ func addRoutes(mux *http.ServeMux, h *handler.Handler) http.Handler {
 
 	mux.HandleFunc("/", http.NotFound)
 
-	return h.Log(mux)
+	fullHandler := h.Log(mux)
+	fullHandler = h.SetupContext(fullHandler)
+	fullHandler = http.TimeoutHandler(fullHandler, h.ResponseTimeout, "Request Timeout")
+	return fullHandler
 }
