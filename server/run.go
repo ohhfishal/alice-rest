@@ -25,7 +25,7 @@ func Run(
 
 	logger := NewLogger(stdout, cfg.LogLevel)
 
-	a, err := alice.New()
+	a, err := alice.New(alice.MountDirectory(cfg.DatabaseDirectory))
 	if err != nil {
 		return fmt.Errorf("failed to create database: %w", err)
 	}

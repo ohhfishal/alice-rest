@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/ohhfishal/alice-rest/lib/event"
+	"github.com/stretchr/testify/assert"
 )
 
 var port int64 = 8000
@@ -22,6 +24,7 @@ var timeout = 250 * time.Millisecond
 func runServer(t *testing.T, wg *sync.WaitGroup, runner serverRunner) {
 	defer wg.Done()
 	runner.Run(t)
+	runner.Cleanup()
 }
 
 func TestInit(t *testing.T) {
@@ -51,22 +54,22 @@ func TestPostEvent(t *testing.T) {
 	t.Run("UserExists", func(t *testing.T) {
 		url = url + "/api/v1/event/valid"
 		// TODO: Register the user
-		reader := strings.NewReader("{}")
-		expected := http.StatusCreated
-		res, err := http.Post(url, "application/json", reader)
-		if err != nil {
-			t.Fatalf("making request: %s", err)
-		}
-
-		body, err := io.ReadAll(res.Body)
-		if err != nil {
-			t.Fatalf("reading body response: %s", err)
-		}
-
-		if status := res.StatusCode; status != expected {
-			t.Fatalf("expected %d: got: %d: %s", expected, status, body)
-		}
+		status, err := testPost(t, url, `{"description":"foo"}`)
+		assert.Nil(t, err)
+		assert.Equal(t, status, http.StatusCreated)
 	})
+}
+
+func expectNil(t *testing.T, err error) {
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func expectStatus(t *testing.T, status, expected int) {
+	if status != expected {
+		t.Fatalf("status: expected: %d got: %d", expected, status)
+	}
 }
 
 func TestGetEvent(t *testing.T) {
@@ -90,6 +93,22 @@ func TestGetEvent(t *testing.T) {
 			testGetJSON(urlBase+"/api/v1/event/valid/0", 200, &expected)(t)
 		})
 	})
+}
+
+func testPost(t *testing.T, url, object string) (int, error) {
+	reader := strings.NewReader(object)
+	res, err := http.Post(url, "application/json", reader)
+	if err != nil {
+		return 0, fmt.Errorf("POST Request: %w", err)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return 0, fmt.Errorf("Reading response: %w", err)
+	}
+
+	t.Log("Response: ", string(body))
+	return res.StatusCode, nil
 }
 
 func testGetJSON[T comparable](url string, status int, expected T) func(*testing.T) {
@@ -149,19 +168,13 @@ func runContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), timeout)
 }
 
-func newEnv() func(string) string {
-	newPort := atomic.AddInt64(&port, 1)
-	return func(env string) string {
-		switch env {
-		case "HOST":
-			return "localhost"
-		case "PORT":
-			return fmt.Sprintf("%d", newPort)
-		case "LOG_LEVEL":
-			return "DEBUG"
-		default:
-			return ""
+func addEnv(next func(string) string, key, value string) func(string) string {
+	return func(k string) string {
+		switch k {
+		case key:
+			return value
 		}
+		return next(k)
 	}
 }
 
@@ -185,6 +198,13 @@ func (r serverRunner) Run(t *testing.T) {
 	// t.Log("stdout:", r.stdout.String())
 }
 
+func (r serverRunner) Cleanup() {
+	if path := r.getenv("DATABASE_DIRECTORY"); path != "" {
+		_ = os.RemoveAll(path)
+	}
+
+}
+
 func defaultRunner(override context.Context) serverRunner {
 	var ctx context.Context
 	if override != nil {
@@ -193,9 +213,30 @@ func defaultRunner(override context.Context) serverRunner {
 		ctx, _ = runContext()
 	}
 
+	newDir, err := os.MkdirTemp("", "testdata-")
+	if err != nil {
+		panic(err)
+	}
+
+	newPort := atomic.AddInt64(&port, 1)
+	env := func(env string) string {
+		switch env {
+		case "HOST":
+			return "localhost"
+		case "PORT":
+			return fmt.Sprintf("%d", newPort)
+		case "LOG_LEVEL":
+			return "DEBUG"
+		case "DATABASE_DIRECTORY":
+			return newDir + "/"
+		default:
+			return ""
+		}
+	}
+
 	runner := serverRunner{
 		ctx:    ctx,
-		getenv: newEnv(),
+		getenv: env,
 		stdin:  strings.NewReader(""),
 	}
 	return runner

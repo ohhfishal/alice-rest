@@ -37,7 +37,7 @@ func (h *Handler) PostEvent() http.Handler {
 
 		_, err = h.Alice.Create(user, newEvent)
 		if err != nil {
-			return Error(500, fmt.Errorf("failed to create event: %w", err))
+			return Error(500, fmt.Errorf("create event: %w", err))
 		}
 		return Text(201, "Created\n")
 	})

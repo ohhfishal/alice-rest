@@ -6,6 +6,8 @@ import (
 	"github.com/ohhfishal/alice-rest/lib/event"
 )
 
+var MountDirectory = alice.MountDirectory
+
 type Alice interface {
 	// Returns ID, error
 	Create(user string, newEvent event.Event) (string, error)
@@ -15,6 +17,6 @@ type Alice interface {
 	Close(context.Context) error
 }
 
-func New() (Alice, error) {
-	return alice.New()
+func New(args ...alice.Option) (Alice, error) {
+	return alice.New(args...)
 }

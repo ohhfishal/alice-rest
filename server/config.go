@@ -8,10 +8,11 @@ import (
 type LogLevel string
 
 type Config struct {
-	Host            string
-	Port            string
-	LogLevel        slog.Level
-	ResponseTimeout time.Duration
+	Host              string
+	Port              string
+	LogLevel          slog.Level
+	ResponseTimeout   time.Duration
+	DatabaseDirectory string
 }
 
 func (logLevel LogLevel) Level() slog.Level {
@@ -33,9 +34,10 @@ func (logLevel LogLevel) Level() slog.Level {
 func NewConfig(_ []string, getenv func(string) string) *Config {
 	logLevel := (LogLevel)(getenv("LOG_LEVEL"))
 	config := &Config{
-		Host:     getenv("HOST"),
-		Port:     getenv("PORT"),
-		LogLevel: logLevel.Level(),
+		Host:              getenv("HOST"),
+		Port:              getenv("PORT"),
+		LogLevel:          logLevel.Level(),
+		DatabaseDirectory: getenv("DATABASE_DIRECTORY"),
 	}
 	config.UseDefaults()
 	return config
