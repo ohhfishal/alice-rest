@@ -10,12 +10,10 @@ import (
 	"time"
 
 	"github.com/ohhfishal/alice-rest/database"
-	"github.com/ohhfishal/alice-rest/lib/alice"
 )
 
 type Handler struct {
 	Logger          *slog.Logger
-	Alice           alice.Alice
 	DB              database.Database
 	ResponseTimeout time.Duration
 }

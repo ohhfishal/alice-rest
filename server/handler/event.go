@@ -62,13 +62,6 @@ func (h *Handler) PatchEvent() http.Handler {
 
 func (h *Handler) DeleteEvent() http.Handler {
 	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
-		user := r.PathValue("user")
-		id := r.PathValue("id")
-
-		err := h.Alice.Delete(user, id)
-		if err != nil {
-			return Error(500, fmt.Errorf("deleting event: %w", err))
-		}
-		return Text(200, "Deleted\n")
+		return Error(501, ErrNotImplemented)
 	})
 }
