@@ -51,6 +51,23 @@ func Error(status int, err error) http.Handler {
 	})
 }
 
+type Validator interface {
+  Valid() error
+}
+
+func decodeValidator[T Validator](r *http.Request) (T, error) {
+	var zero T
+  val, err := decode[T](r)
+  if err != nil {
+    return zero, err
+  }
+
+  if err := val.Valid(); err != nil {
+    return zero, err
+  }
+  return val, nil
+}
+
 func decode[T any](r *http.Request) (T, error) {
 	var v T
 	err := json.NewDecoder(r.Body).Decode(&v)

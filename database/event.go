@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+  "errors"
   _ "embed"
 	"fmt"
 )
@@ -10,6 +11,17 @@ type Event struct {
 	ID          int64
 	Description string `json:"description"`
 	State       string
+}
+
+func (e Event) Valid() error {
+  switch {
+  case e.Description == ``:
+    return errors.New("missing description")
+  default:
+    return nil
+
+  }
+
 }
 
 //go:embed sql/migration.sql

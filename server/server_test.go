@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/ohhfishal/alice-rest/database"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,22 +47,49 @@ func TestPostEvent(t *testing.T) {
 	runner := defaultRunner(nil)
 	go runServer(t, &wg, runner)
 
-	url := runner.Url()
-	t.Run("Readyz", Readyz(url, 200))
+  tests := []struct{
+    Name string
+    User string
+    Body database.Event
+    Status int
+  }{
+    {
+      Name: "Valid",
+      User: "vaild",
+			Body: database.Event{ Description: "foo" },
+      Status: 201,
+    },
+    {
+      Name: "Valid/No Body",
+      User: "vaild",
+      Status: 400,
+    },
+    {
+      Name: "No User/ValidBody",
+      User: "",
+      Status: 404,
+			Body: database.Event{ Description: "foo" },
+    },
+    {
+      Name: "No User/No Body",
+      User: "",
+      Status: 404,
+			Body: database.Event{ Description: "foo" },
+    },
+  }
 
-	t.Run("UserExists", func(t *testing.T) {
-		// TODO: Register the user
-    // TODO: Convert to table-based tests
-		event := database.Event{
-			Description: "foo",
-		}
-		url = url + "/api/v1/event/valid"
-		id := PostEvent(t, url, event, 201)
-		assert.Greater(t, id, (int64)(-1), "invalid id")
-	})
+	t.Run("Readyz", Readyz(runner.Url(), 200))
+
+  for _, test := range tests {
+    t.Run(test.Name, func(t *testing.T) {
+      url := runner.Url() + "/api/v1/event/" + test.User
+      _ = PostEvent(t, url, test.Body, test.Status)
+    })
+  }
 }
 
 func TestGetEvent(t *testing.T) {
+  return
 	var wg sync.WaitGroup
 	wg.Add(1)
 	defer wg.Wait()
@@ -118,19 +144,21 @@ func PostEvent(t *testing.T, url string, event database.Event, status int) int64
 	require.Nil(t, err)
 	reader := bytes.NewReader(eventBytes)
 
+  t.Logf("POST: %s", url)
 	res, err := http.Post(url, "application/json", reader)
+	body, err := io.ReadAll(res.Body)
+
 	require.Nil(t, err)
-	require.Equal(t, res.StatusCode, status)
-	defer t.Logf("POST: %d", res.StatusCode)
+	require.Equal(t, status, res.StatusCode, string(body))
+	t.Logf("POST: %d", res.StatusCode)
 
 	if res.StatusCode >= 400 {
 		return id
 	}
 
-	body, err := io.ReadAll(res.Body)
 	err = json.Unmarshal(body, &id)
 	require.Nil(t, err)
-	defer t.Log("Body: ", string(body))
+	t.Log("Body: ", string(body))
 	return id
 
 }

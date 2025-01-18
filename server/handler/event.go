@@ -10,11 +10,17 @@ import (
 	"github.com/ohhfishal/alice-rest/database"
 )
 
+var ErrMissingUser = errors.New("missing parameter: user")
+
 func (h *Handler) PostEvent() http.Handler {
 	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
-		_ = r.PathValue("user")
+    user := r.PathValue("user")
+    fmt.Println("user: " + user)
+    if user == `` {
+			return Error(400, ErrMissingUser)
+    }
 
-		event, err := decode[database.Event](r)
+		event, err := decodeValidator[database.Event](r)
 		if err != nil {
 			return Error(400, err)
 		}
