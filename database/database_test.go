@@ -2,10 +2,10 @@ package database
 
 import (
 	"context"
-  "log/slog"
-	"testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log/slog"
+	"testing"
 )
 
 func testContext() context.Context {
@@ -13,7 +13,7 @@ func testContext() context.Context {
 }
 
 func newMemoryDB(t *testing.T) Database {
-  logger := slog.Default()
+	logger := slog.Default()
 	db, err := New(":memory:", Log(logger), Migrate(testContext()))
 	require.Nil(t, err)
 	require.NotNil(t, db)
@@ -52,9 +52,9 @@ func TestEvent(t *testing.T) {
 	assert.Equal(t, event.Description, newEvent.Description)
 	assert.Equal(t, "in progress", newEvent.State)
 
-  rows, err := DeleteEvent(ctx, db, id)
-  require.Nil(t, err)
-  require.Equal(t, (int64)(1), rows)
+	rows, err := DeleteEvent(ctx, db, id)
+	require.Nil(t, err)
+	require.Equal(t, (int64)(1), rows)
 
 	_, err = SelectEvent(ctx, db, id)
 	require.NotNil(t, err)

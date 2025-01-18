@@ -2,8 +2,8 @@ package database
 
 import (
 	"context"
-  "errors"
-  _ "embed"
+	_ "embed"
+	"errors"
 	"fmt"
 )
 
@@ -14,13 +14,13 @@ type Event struct {
 }
 
 func (e Event) Valid() error {
-  switch {
-  case e.Description == ``:
-    return errors.New("missing description")
-  default:
-    return nil
+	switch {
+	case e.Description == ``:
+		return errors.New("missing description")
+	default:
+		return nil
 
-  }
+	}
 
 }
 
@@ -43,7 +43,6 @@ func InsertEvent(ctx context.Context, db Database, event Event) (int64, error) {
 	}
 	return result.LastInsertId()
 }
-
 
 func SelectEvent(ctx context.Context, db Database, id int64) (*Event, error) {
 	row := db.QueryRowContext(ctx, selectEvent, id)

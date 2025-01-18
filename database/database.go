@@ -24,20 +24,20 @@ type SQLite struct {
 type Option func(*SQLite) error
 
 func Log(logger *slog.Logger) func(*SQLite) error {
-  return func(s *SQLite) error {
-    s.logger = logger
-    return nil
-  }
+	return func(s *SQLite) error {
+		s.logger = logger
+		return nil
+	}
 }
 
 func Migrate(ctx context.Context) func(*SQLite) error {
-  return func(s *SQLite) error {
-    _, err := s.ExecContext(ctx, migration)
-    if err != nil {
-      return fmt.Errorf("migrations: %w", err)
-    }
-    return nil
-  }
+	return func(s *SQLite) error {
+		_, err := s.ExecContext(ctx, migration)
+		if err != nil {
+			return fmt.Errorf("migrations: %w", err)
+		}
+		return nil
+	}
 }
 
 func New(connectionString string, options ...Option) (Database, error) {
@@ -66,11 +66,11 @@ func (s *SQLite) Ping() error {
 }
 
 func (s *SQLite) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-  s.logger.Debug("Exec", "sql", query, "args", args)
+	s.logger.Debug("Exec", "sql", query, "args", args)
 	return s.db.ExecContext(ctx, query, args...)
 }
 
 func (s *SQLite) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-  s.logger.Debug("Query", "sql", query, "args", args)
+	s.logger.Debug("Query", "sql", query, "args", args)
 	return s.db.QueryRowContext(ctx, query, args...)
 }

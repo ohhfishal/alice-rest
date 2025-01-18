@@ -10,7 +10,7 @@ import (
 
 func (h Handler) UserAuth(next http.Handler) http.Handler {
 	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
-    // TODO: Implement
+		// TODO: Implement
 		return next
 	})
 }
