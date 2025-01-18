@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+  _ "embed"
 	"fmt"
 )
 
@@ -11,16 +12,17 @@ type Event struct {
 	State       string
 }
 
-// TODO: Move into a migration script
-const setup = `
-CREATE TABLE events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, --sqllite bug
-  description TEXT NOT NULL,
-  state VARCHAR(20) NOT NULL DEFAULT 'in progress' CHECK (state IN ('in progress', 'done'))
-);
-`
+//go:embed sql/migration.sql
+var migration string
 
-const insertEvent = `INSERT INTO events (description) VALUES (?);`
+//go:embed sql/insert_event.sql
+var insertEvent string
+
+//go:embed sql/select_event.sql
+var selectEvent string
+
+//go:embed sql/delete_event.sql
+var deleteEvent string
 
 func InsertEvent(ctx context.Context, db Database, event Event) (int64, error) {
 	result, err := db.ExecContext(ctx, insertEvent, event.Description)
@@ -30,10 +32,9 @@ func InsertEvent(ctx context.Context, db Database, event Event) (int64, error) {
 	return result.LastInsertId()
 }
 
-const getEvent = `SELECT * FROM events WHERE id = ?;`
 
-func GetEvent(ctx context.Context, db Database, id int64) (*Event, error) {
-	row := db.QueryRowContext(ctx, getEvent, id)
+func SelectEvent(ctx context.Context, db Database, id int64) (*Event, error) {
+	row := db.QueryRowContext(ctx, selectEvent, id)
 
 	event := &Event{}
 	err := row.Scan(&event.ID, &event.Description, &event.State)
@@ -43,4 +44,12 @@ func GetEvent(ctx context.Context, db Database, id int64) (*Event, error) {
 
 	return event, nil
 
+}
+
+func DeleteEvent(ctx context.Context, db Database, id int64) (int64, error) {
+	result, err := db.ExecContext(ctx, deleteEvent, id)
+	if err != nil {
+		return -1, fmt.Errorf("delete: %w", err)
+	}
+	return result.RowsAffected()
 }

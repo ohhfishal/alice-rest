@@ -53,6 +53,7 @@ func TestPostEvent(t *testing.T) {
 
 	t.Run("UserExists", func(t *testing.T) {
 		// TODO: Register the user
+    // TODO: Convert to table-based tests
 		event := database.Event{
 			Description: "foo",
 		}
@@ -71,27 +72,44 @@ func TestGetEvent(t *testing.T) {
 	go runServer(t, &wg, runner)
 
 	urlBase := runner.Url()
+  tests := []struct{
+    Name string
+    IDOverride int64
+    PostBody database.Event
+    Status int
+    Expected database.Event
+  }{
+    {
+      Name: "EventExists",
+			PostBody: database.Event{ Description: "foo" },
+      Status: 200,
+      Expected: database.Event{ Description: "foo", State: "in progress" },
+    },
+    {
+      Name: "EventMissing",
+      IDOverride: -1,
+      Status: 404,
+    },
+  }
 
+  var zero database.Event
 	t.Run("Readyz", Readyz(runner.Url(), 200))
-	t.Run("UserExists", func(t *testing.T) {
-		// TODO: Register the user
-		//t.Run("EventMissing", testGet(urlBase+"/api/v1/event/valid/99", http.StatusNotFound))
-		t.Run("EventExists", func(t *testing.T) {
-			event := database.Event{
-				Description: "foo",
-			}
+  for _, test := range tests {
+    t.Run(test.Name, func(t *testing.T) {
 
-			id := PostEvent(t, urlBase+"/api/v1/event/user", event, 201)
-			event.ID = id
-			// Set to defaults
-			event.State = "in progress"
-			t.Logf("ID: %d", id)
+      var id int64
+      if test.PostBody != zero {
+        id = PostEvent(t, urlBase+"/api/v1/event/user", test.PostBody, 201)
+      }
 
-			url := fmt.Sprintf("%s/api/v1/event/user/%d", urlBase, id)
-			result := GetEvent(t, url, 200)
-			assert.Equal(t, event, result)
-		})
-	})
+      if test.IDOverride != 0 {
+        id = test.IDOverride
+      }
+
+      url := fmt.Sprintf("%s/api/v1/event/user/%d", urlBase, id)
+      GetEvent(t, url, test.Status, test.Expected)
+    })
+  }
 }
 
 func PostEvent(t *testing.T, url string, event database.Event, status int) int64 {
@@ -117,7 +135,7 @@ func PostEvent(t *testing.T, url string, event database.Event, status int) int64
 
 }
 
-func GetEvent(t *testing.T, url string, status int) database.Event {
+func GetEvent(t *testing.T, url string, status int, expected database.Event) {
 	var event database.Event
 
 	res, err := http.Get(url)
@@ -125,14 +143,15 @@ func GetEvent(t *testing.T, url string, status int) database.Event {
 	require.Equal(t, status, res.StatusCode)
 	defer t.Logf("GET: %d", res.StatusCode)
 
-	if res.StatusCode >= 400 {
-		return event
+	if res.StatusCode >= 300 {
+		return
 	}
 
 	body, err := io.ReadAll(res.Body)
 	err = json.Unmarshal(body, &event)
 	require.Nil(t, err)
-	return event
+  require.Equal(t, expected.Description, event.Description)
+  require.Equal(t, expected.State, event.State)
 }
 
 func Readyz(url string, status int) func(*testing.T) {

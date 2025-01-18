@@ -36,7 +36,7 @@ func (h *Handler) GetEvent() http.Handler {
 			return Error(400, err)
 		}
 
-		event, err := database.GetEvent(context.Background(), h.DB, (int64)(id))
+		event, err := database.SelectEvent(context.Background(), h.DB, (int64)(id))
 		switch {
 		case errors.Is(database.ErrNotFound, err):
 			return Error(404, fmt.Errorf("create event: %w", err))

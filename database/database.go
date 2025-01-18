@@ -12,9 +12,7 @@ var ErrNotFound = sql.ErrNoRows
 
 type Database interface {
 	Ping() error
-	Exec(string, ...any) (sql.Result, error)
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
-	QueryRow(string, ...any) *sql.Row
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
@@ -24,6 +22,23 @@ type SQLite struct {
 }
 
 type Option func(*SQLite) error
+
+func Log(logger *slog.Logger) func(*SQLite) error {
+  return func(s *SQLite) error {
+    s.logger = logger
+    return nil
+  }
+}
+
+func Migrate(ctx context.Context) func(*SQLite) error {
+  return func(s *SQLite) error {
+    _, err := s.ExecContext(ctx, migration)
+    if err != nil {
+      return fmt.Errorf("migrations: %w", err)
+    }
+    return nil
+  }
+}
 
 func New(connectionString string, options ...Option) (Database, error) {
 	db, err := sql.Open("sqlite", connectionString)
@@ -43,13 +58,6 @@ func New(connectionString string, options ...Option) (Database, error) {
 			return nil, fmt.Errorf("applying option: %w", err)
 		}
 	}
-
-	// TODO: Move this out to the code that sets up the sql database
-	_, err = sqlite.Exec(setup)
-	if err != nil {
-		return nil, fmt.Errorf("migrations: %w", err)
-	}
-
 	return sqlite, nil
 }
 
@@ -57,18 +65,12 @@ func (s *SQLite) Ping() error {
 	return s.db.Ping()
 }
 
-func (s *SQLite) Exec(query string, args ...any) (sql.Result, error) {
-	return s.ExecContext(context.Background(), query, args...)
-}
-
 func (s *SQLite) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+  s.logger.Debug("Exec", "sql", query, "args", args)
 	return s.db.ExecContext(ctx, query, args...)
 }
 
-func (s *SQLite) QueryRow(query string, args ...any) *sql.Row {
-	return s.QueryRowContext(context.Background(), query, args...)
-}
-
 func (s *SQLite) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+  s.logger.Debug("Query", "sql", query, "args", args)
 	return s.db.QueryRowContext(ctx, query, args...)
 }

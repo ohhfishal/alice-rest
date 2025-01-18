@@ -22,12 +22,10 @@ func Run(
 	defer cancel()
 
 	cfg := NewConfig(args, getenv)
-
 	logger := NewLogger(stdout, cfg.LogLevel)
 
-
-	// TODO: Load from env
-	db, err := database.New(":memory:")
+	// TODO: Load from env/cfg
+	db, err := database.New(":memory:", database.Migrate(ctx))
 	if err != nil {
 		return fmt.Errorf("failed to sqlite database: %w", err)
 	}
