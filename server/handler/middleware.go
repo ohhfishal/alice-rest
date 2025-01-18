@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,12 +9,8 @@ import (
 )
 
 func (h Handler) UserAuth(next http.Handler) http.Handler {
-	// TODO: Implement
 	return CustomHandler(func(w http.ResponseWriter, r *http.Request) http.Handler {
-		user := r.PathValue("user")
-		if user == "" || user == "test" {
-			return Error(403, errors.New("Forbidden"))
-		}
+		// TODO: Implement
 		return next
 	})
 }

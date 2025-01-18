@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ohhfishal/alice-rest/lib/alice"
+	"github.com/ohhfishal/alice-rest/database"
 	"github.com/ohhfishal/alice-rest/server/handler"
 )
 
@@ -22,17 +22,17 @@ func Run(
 	defer cancel()
 
 	cfg := NewConfig(args, getenv)
-
 	logger := NewLogger(stdout, cfg.LogLevel)
 
-	a, err := alice.New(alice.MountDirectory(cfg.DatabaseDirectory))
+	// TODO: Load from env/cfg
+	db, err := database.New(":memory:", database.Migrate(ctx))
 	if err != nil {
-		return fmt.Errorf("failed to create database: %w", err)
+		return fmt.Errorf("failed to sqlite database: %w", err)
 	}
 
 	h := handler.Handler{
 		Logger:          logger,
-		Alice:           a,
+		DB:              db,
 		ResponseTimeout: cfg.ResponseTimeout,
 	}
 

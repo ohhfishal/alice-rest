@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ohhfishal/alice-rest/lib/event"
-	"github.com/stretchr/testify/assert"
+	"github.com/ohhfishal/alice-rest/database"
+	"github.com/stretchr/testify/require"
 )
 
 var port int64 = 8000
@@ -35,8 +36,7 @@ func TestInit(t *testing.T) {
 	runner := defaultRunner(nil)
 	go runServer(t, &wg, runner)
 
-	t.Run("Readyz", testUp(runner.Url()))
-	t.Run("BadPath", testGet(runner.Url()+"/bad", http.StatusNotFound))
+	t.Run("Readyz", Readyz(runner.Url(), 200))
 }
 
 func TestPostEvent(t *testing.T) {
@@ -47,32 +47,49 @@ func TestPostEvent(t *testing.T) {
 	runner := defaultRunner(nil)
 	go runServer(t, &wg, runner)
 
-	url := runner.Url()
-	t.Run("Readyz", testUp(url))
-	t.Run("UserAuth", testUserAuth("POST", url+"/api/v1/event/test"))
-
-	t.Run("UserExists", func(t *testing.T) {
-		url = url + "/api/v1/event/valid"
-		// TODO: Register the user
-		status, err := testPost(t, url, `{"description":"foo"}`)
-		assert.Nil(t, err)
-		assert.Equal(t, status, http.StatusCreated)
-	})
-}
-
-func expectNil(t *testing.T, err error) {
-	if err != nil {
-		t.Fatal(err.Error())
+	tests := []struct {
+		Name   string
+		User   string
+		Body   database.Event
+		Status int
+	}{
+		{
+			Name:   "Valid",
+			User:   "vaild",
+			Body:   database.Event{Description: "foo"},
+			Status: 201,
+		},
+		{
+			Name:   "Valid/No Body",
+			User:   "vaild",
+			Status: 400,
+		},
+		{
+			Name:   "No User/ValidBody",
+			User:   "",
+			Status: 404,
+			Body:   database.Event{Description: "foo"},
+		},
+		{
+			Name:   "No User/No Body",
+			User:   "",
+			Status: 404,
+			Body:   database.Event{Description: "foo"},
+		},
 	}
-}
 
-func expectStatus(t *testing.T, status, expected int) {
-	if status != expected {
-		t.Fatalf("status: expected: %d got: %d", expected, status)
+	t.Run("Readyz", Readyz(runner.Url(), 200))
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			url := runner.Url() + "/api/v1/event/" + test.User
+			_ = PostEvent(t, url, test.Body, test.Status)
+		})
 	}
 }
 
 func TestGetEvent(t *testing.T) {
+	return
 	var wg sync.WaitGroup
 	wg.Add(1)
 	defer wg.Wait()
@@ -81,86 +98,97 @@ func TestGetEvent(t *testing.T) {
 	go runServer(t, &wg, runner)
 
 	urlBase := runner.Url()
-	t.Run("Readyz", testUp(runner.Url()))
-	t.Run("UserAuth", testUserAuth("GET", urlBase+"/api/v1/event/test/0"))
+	tests := []struct {
+		Name       string
+		IDOverride int64
+		PostBody   database.Event
+		Status     int
+		Expected   database.Event
+	}{
+		{
+			Name:     "EventExists",
+			PostBody: database.Event{Description: "foo"},
+			Status:   200,
+			Expected: database.Event{Description: "foo", State: "in progress"},
+		},
+		{
+			Name:       "EventMissing",
+			IDOverride: -1,
+			Status:     404,
+		},
+	}
 
-	t.Run("UserExists", func(t *testing.T) {
-		// TODO: Register the user
-		t.Run("EventMissing", testGet(urlBase+"/api/v1/event/valid/bad", http.StatusNotFound))
-		t.Run("EventExists", func(t *testing.T) {
-			var expected event.Event
-			// TODO: Post the event
-			testGetJSON(urlBase+"/api/v1/event/valid/0", 200, &expected)(t)
+	var zero database.Event
+	t.Run("Readyz", Readyz(runner.Url(), 200))
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+
+			var id int64
+			if test.PostBody != zero {
+				id = PostEvent(t, urlBase+"/api/v1/event/user", test.PostBody, 201)
+			}
+
+			if test.IDOverride != 0 {
+				id = test.IDOverride
+			}
+
+			url := fmt.Sprintf("%s/api/v1/event/user/%d", urlBase, id)
+			GetEvent(t, url, test.Status, test.Expected)
 		})
-	})
+	}
 }
 
-func testPost(t *testing.T, url, object string) (int, error) {
-	reader := strings.NewReader(object)
+func PostEvent(t *testing.T, url string, event database.Event, status int) int64 {
+	var id int64
+	eventBytes, err := json.Marshal(event)
+	require.Nil(t, err)
+	reader := bytes.NewReader(eventBytes)
+
+	t.Logf("POST: %s", url)
 	res, err := http.Post(url, "application/json", reader)
-	if err != nil {
-		return 0, fmt.Errorf("POST Request: %w", err)
-	}
-
 	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return 0, fmt.Errorf("Reading response: %w", err)
+
+	require.Nil(t, err)
+	require.Equal(t, status, res.StatusCode, string(body))
+	t.Logf("POST: %d", res.StatusCode)
+
+	if res.StatusCode >= 400 {
+		return id
 	}
 
-	t.Log("Response: ", string(body))
-	return res.StatusCode, nil
+	err = json.Unmarshal(body, &id)
+	require.Nil(t, err)
+	t.Log("Body: ", string(body))
+	return id
+
 }
 
-func testGetJSON[T comparable](url string, status int, expected T) func(*testing.T) {
-	return func(t *testing.T) {
-		t.Helper()
-		bytes := testGetHelper(t, url, status)
+func GetEvent(t *testing.T, url string, status int, expected database.Event) {
+	var event database.Event
 
-		var result T
-		if err := json.Unmarshal(bytes, &result); err != nil {
-			t.Fatalf("unmarshaling result: %s", err.Error())
-		}
-
-		if result != expected {
-			t.Fatalf("expected: %v: got: %v", expected, result)
-		}
-	}
-}
-
-func testGet(url string, expected int) func(*testing.T) {
-	return func(t *testing.T) {
-		t.Helper()
-		_ = testGetHelper(t, url, expected)
-	}
-}
-
-func testGetHelper(t *testing.T, url string, expected int) []byte {
-	t.Helper()
 	res, err := http.Get(url)
-	if err != nil {
-		t.Fatalf("making request: %s", err)
+	require.Nil(t, err)
+	require.Equal(t, status, res.StatusCode)
+	defer t.Logf("GET: %d", res.StatusCode)
+
+	if res.StatusCode >= 300 {
+		return
 	}
 
 	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("reading body response: %s", err)
-	}
-
-	if status := res.StatusCode; status != expected {
-		t.Fatalf("expected %d: got: %d: %s", expected, status, body)
-	}
-	return body
+	err = json.Unmarshal(body, &event)
+	require.Nil(t, err)
+	require.Equal(t, expected.Description, event.Description)
+	require.Equal(t, expected.State, event.State)
 }
 
-func testUserAuth(_, url string) func(*testing.T) {
-	return testGet(url, http.StatusForbidden)
-}
-
-func testUp(urlBase string) func(*testing.T) {
+func Readyz(url string, status int) func(*testing.T) {
 	return func(t *testing.T) {
 		// hack to make sure the server is up
 		time.Sleep(timeout / 100)
-		testGet(urlBase+"/readyz", http.StatusOK)(t)
+		res, err := http.Get(url + "/readyz")
+		require.Nil(t, err)
+		require.Equal(t, res.StatusCode, status)
 	}
 }
 

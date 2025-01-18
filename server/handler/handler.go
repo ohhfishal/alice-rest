@@ -9,12 +9,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ohhfishal/alice-rest/lib/alice"
+	"github.com/ohhfishal/alice-rest/database"
 )
 
 type Handler struct {
 	Logger          *slog.Logger
-	Alice           alice.Alice
+	DB              database.Database
 	ResponseTimeout time.Duration
 }
 
@@ -49,6 +49,23 @@ func Error(status int, err error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), status)
 	})
+}
+
+type Validator interface {
+	Valid() error
+}
+
+func decodeValidator[T Validator](r *http.Request) (T, error) {
+	var zero T
+	val, err := decode[T](r)
+	if err != nil {
+		return zero, err
+	}
+
+	if err := val.Valid(); err != nil {
+		return zero, err
+	}
+	return val, nil
 }
 
 func decode[T any](r *http.Request) (T, error) {
